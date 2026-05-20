@@ -11,7 +11,6 @@ from fastapi import FastAPI, File, UploadFile, Request, HTTPException, Form
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-import google.generativeai as genai
 import pydantic
 from dotenv import load_dotenv
 
@@ -150,6 +149,11 @@ async def upload_receipt(
     if not active_api_key:
         raise HTTPException(status_code=400, detail="API Key not found. Please add your Gemini API Key in Settings.")
     
+    try:
+        import google.generativeai as genai
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Server missing dependencies: {str(e)}")
+        
     genai.configure(api_key=active_api_key)
     
     prompt = (
