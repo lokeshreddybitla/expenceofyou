@@ -4,3 +4,4 @@ python-multipart
 anthropic
 antigravity
 jinja2
+python-dotenv
