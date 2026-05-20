@@ -4,7 +4,6 @@ import uuid
 import base64
 import csv
 import io
-import urllib.request
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 
@@ -12,6 +11,7 @@ from fastapi import FastAPI, File, UploadFile, Request, HTTPException, Form
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from anthropic import Anthropic
 import pydantic
 from dotenv import load_dotenv
 
@@ -142,13 +142,15 @@ async def upload_receipt(
     contents = await file.read()
     b64_content = base64.b64encode(contents).decode("utf-8")
     
-    # Identify media type for Gemini
+    # Identify media type for Anthropic
     media_type = file.content_type
     
-    # Initialize Gemini client
-    active_api_key = api_key or os.environ.get("GEMINI_API_KEY")
+    # Initialize Anthropic client
+    active_api_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
     if not active_api_key:
-        raise HTTPException(status_code=400, detail="API Key not found. Please add your Gemini API Key in Settings.")
+        raise HTTPException(status_code=400, detail="API Key not found. Please add your Anthropic API Key in Settings.")
+    
+    client = Anthropic(api_key=active_api_key)
     
     prompt = (
         "You are an expense extraction assistant. Analyze the uploaded bill or receipt image "
@@ -159,35 +161,56 @@ async def upload_receipt(
     )
     
     try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={active_api_key}"
-        
-        payload = {
-            "contents": [
-                {
-                    "parts": [
-                        {
-                            "text": prompt
-                        },
-                        {
-                            "inline_data": {
-                                "mime_type": media_type,
-                                "data": b64_content
+        if file.content_type == "application/pdf":
+             message = client.messages.create(
+                model="claude-3-5-sonnet-20240620",
+                max_tokens=1024,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "document",
+                                "source": {
+                                    "type": "base64",
+                                    "media_type": "application/pdf",
+                                    "data": b64_content
+                                }
+                            },
+                            {
+                                "type": "text",
+                                "text": prompt
                             }
-                        }
-                    ]
-                }
-            ],
-            "generationConfig": {
-                "temperature": 0.2,
-                "response_mime_type": "application/json"
-            }
-        }
-        
-        req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers={'Content-Type': 'application/json'})
-        with urllib.request.urlopen(req) as response:
-            res_data = json.loads(response.read().decode('utf-8'))
+                        ]
+                    }
+                ]
+            )
+        else:
+            message = client.messages.create(
+                model="claude-3-5-sonnet-20240620",
+                max_tokens=1024,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "image",
+                                "source": {
+                                    "type": "base64",
+                                    "media_type": media_type,
+                                    "data": b64_content
+                                }
+                            },
+                            {
+                                "type": "text",
+                                "text": prompt
+                            }
+                        ]
+                    }
+                ]
+            )
             
-        result_text = res_data['candidates'][0]['content']['parts'][0]['text']
+        result_text = message.content[0].text
         
         # Gemini might wrap JSON in markdown blocks
         if "```json" in result_text:

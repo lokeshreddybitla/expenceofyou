@@ -24,7 +24,7 @@ function initSettings() {
     if (settingsBtn && settingsModal) {
         settingsBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            apiKeyInput.value = localStorage.getItem('geminiKey') || '';
+            apiKeyInput.value = localStorage.getItem('anthropicKey') || '';
             settingsModal.classList.remove('hidden');
         });
 
@@ -36,9 +36,9 @@ function initSettings() {
             e.preventDefault();
             const key = apiKeyInput.value.trim();
             if (key) {
-                localStorage.setItem('geminiKey', key);
+                localStorage.setItem('anthropicKey', key);
             } else {
-                localStorage.removeItem('geminiKey');
+                localStorage.removeItem('anthropicKey');
             }
             settingsModal.classList.add('hidden');
             alert('Settings saved!');
@@ -305,7 +305,7 @@ async function handleFileUpload() {
     const formData = new FormData();
     formData.append('file', file);
     
-    const userApiKey = localStorage.getItem('geminiKey');
+    const userApiKey = localStorage.getItem('anthropicKey');
     if (userApiKey) {
         formData.append('api_key', userApiKey);
     }
