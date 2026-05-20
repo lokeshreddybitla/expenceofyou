@@ -11,7 +11,7 @@ from fastapi import FastAPI, File, UploadFile, Request, HTTPException, Form
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from anthropic import Anthropic
+import google.generativeai as genai
 import pydantic
 from dotenv import load_dotenv
 
@@ -142,15 +142,15 @@ async def upload_receipt(
     contents = await file.read()
     b64_content = base64.b64encode(contents).decode("utf-8")
     
-    # Identify media type for Anthropic
+    # Identify media type for Gemini
     media_type = file.content_type
     
-    # Initialize Anthropic client
-    active_api_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
+    # Initialize Gemini client
+    active_api_key = api_key or os.environ.get("GEMINI_API_KEY")
     if not active_api_key:
-        raise HTTPException(status_code=400, detail="API Key not found. Please add your Anthropic API Key in Settings.")
+        raise HTTPException(status_code=400, detail="API Key not found. Please add your Gemini API Key in Settings.")
     
-    client = Anthropic(api_key=active_api_key)
+    genai.configure(api_key=active_api_key)
     
     prompt = (
         "You are an expense extraction assistant. Analyze the uploaded bill or receipt image "
@@ -161,61 +161,16 @@ async def upload_receipt(
     )
     
     try:
-        if file.content_type == "application/pdf":
-            # Claude currently supports PDFs in beta or through specific document blocks
-            # For this exact specification, we will try to pass it as document if supported
-            # Anthropic Claude 3.5 Sonnet supports PDF directly via DocumentBlock
-             message = client.messages.create(
-                model="claude-3-5-sonnet-20240620", # using latest available standard for document extraction if specified fails
-                max_tokens=1024,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "document",
-                                "source": {
-                                    "type": "base64",
-                                    "media_type": "application/pdf",
-                                    "data": b64_content
-                                }
-                            },
-                            {
-                                "type": "text",
-                                "text": prompt
-                            }
-                        ]
-                    }
-                ]
-            )
-        else:
-            message = client.messages.create(
-                model="claude-3-5-sonnet-20240620",
-                max_tokens=1024,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "image",
-                                "source": {
-                                    "type": "base64",
-                                    "media_type": media_type,
-                                    "data": b64_content
-                                }
-                            },
-                            {
-                                "type": "text",
-                                "text": prompt
-                            }
-                        ]
-                    }
-                ]
-            )
-            
-        result_text = message.content[0].text
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        image_part = {
+            "mime_type": media_type,
+            "data": contents
+        }
         
-        # Claude might wrap JSON in markdown blocks
+        response = model.generate_content([prompt, image_part])
+        result_text = response.text
+        
+        # Gemini might wrap JSON in markdown blocks
         if "```json" in result_text:
             result_text = result_text.split("```json")[1].split("```")[0].strip()
         elif "```" in result_text:
@@ -225,7 +180,7 @@ async def upload_receipt(
         return parsed_json
         
     except Exception as e:
-        print("Anthropic API Error:", str(e))
+        print("Gemini API Error:", str(e))
         raise HTTPException(status_code=500, detail=f"Failed to process receipt: {str(e)}")
 
 

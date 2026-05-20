@@ -1,7 +1,7 @@
 fastapi
 uvicorn
 python-multipart
-anthropic
+google-generativeai
+pillow
 antigravity
-python-dotenv
 jinja2
