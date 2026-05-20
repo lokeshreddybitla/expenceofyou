@@ -21,12 +21,36 @@ load_dotenv()
 app = FastAPI(title="Expense Tracker API")
 
 # Setup directories for static files and templates
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if os.path.basename(current_dir) == "api":
+    BASE_DIR = os.path.dirname(current_dir)
+else:
+    BASE_DIR = current_dir
+
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
-templates = Jinja2Templates(directory=TEMPLATES_DIR)
+startup_error = None
+try:
+    if os.path.exists(STATIC_DIR):
+        app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+    templates = Jinja2Templates(directory=TEMPLATES_DIR)
+except Exception as e:
+    startup_error = str(e)
+    templates = None
+
+@app.get("/debug")
+def debug_info():
+    return {
+        "file": __file__,
+        "cwd": os.getcwd(),
+        "BASE_DIR": BASE_DIR,
+        "STATIC_DIR": STATIC_DIR,
+        "static_exists": os.path.exists(STATIC_DIR),
+        "TEMPLATES_DIR": TEMPLATES_DIR,
+        "templates_exists": os.path.exists(TEMPLATES_DIR),
+        "startup_error": startup_error
+    }
 
 # Setup Storage - Vercel only allows writing to /tmp
 DATA_FILE = os.path.join(BASE_DIR, "data", "expenses.json")
