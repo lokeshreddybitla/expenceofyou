@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Expense Tracker - Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <span class="logo-icon">✨</span>
+            <h1>AI Expense Tracker</h1>
+        </div>
+        <div class="nav-links">
+            <a href="/" class="nav-link active">Dashboard</a>
+            <a href="/upload" class="nav-link">Upload Bill</a>
+            <a href="#" id="nav-settings" class="nav-link">⚙️ Settings</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <!-- Summary Cards -->
+        <section class="summary-cards">
+            <div class="card glass">
+                <h3>Total Spent</h3>
+                <p id="total-spent" class="amount">$0.00</p>
+            </div>
+            <div class="card glass">
+                <h3>This Month</h3>
+                <p id="month-spent" class="amount">$0.00</p>
+            </div>
+            <div class="card glass">
+                <h3>Top Category</h3>
+                <p id="top-category" class="category-text">-</p>
+            </div>
+        </section>
+
+        <!-- Actions & Filters -->
+        <section class="actions-bar">
+            <div class="filters">
+                <input type="month" id="filter-month" class="input-modern" placeholder="Filter by Month">
+                <select id="filter-category" class="input-modern">
+                    <option value="All">All Categories</option>
+                    <option value="Food">Food</option>
+                    <option value="Transport">Transport</option>
+                    <option value="Shopping">Shopping</option>
+                    <option value="Utilities">Utilities</option>
+                    <option value="Health">Health</option>
+                    <option value="Entertainment">Entertainment</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="action-buttons">
+                <button id="btn-add-manual" class="btn btn-primary">+ Manual Expense</button>
+                <a href="/api/export" class="btn btn-secondary">Export CSV</a>
+            </div>
+        </section>
+
+        <!-- Expense List -->
+        <section class="expense-list glass">
+            <div class="table-responsive">
+                <table id="expenses-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Merchant</th>
+                            <th>Category</th>
+                            <th>Amount</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="expenses-tbody">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+                <div id="empty-state" class="empty-state hidden">
+                    <p>No expenses found. Add one or upload a bill!</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal for Manual Add -->
+    <div id="manual-modal" class="modal hidden">
+        <div class="modal-content glass">
+            <div class="modal-header">
+                <h2>Add Expense</h2>
+                <button id="close-modal" class="btn-close">&times;</button>
+            </div>
+            <form id="add-expense-form">
+                <div class="form-group">
+                    <label>Amount ($)</label>
+                    <input type="number" step="0.01" id="add-amount" class="input-modern" required>
+                </div>
+                <div class="form-group">
+                    <label>Merchant</label>
+                    <input type="text" id="add-merchant" class="input-modern" required>
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="add-category" class="input-modern" required>
+                        <option value="Food">Food</option>
+                        <option value="Transport">Transport</option>
+                        <option value="Shopping">Shopping</option>
+                        <option value="Utilities">Utilities</option>
+                        <option value="Health">Health</option>
+                        <option value="Entertainment">Entertainment</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" id="add-date" class="input-modern" required>
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <input type="text" id="add-notes" class="input-modern">
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Save Expense</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Settings -->
+    <div id="settings-modal" class="modal hidden">
+        <div class="modal-content glass">
+            <div class="modal-header">
+                <h2>Settings</h2>
+                <button id="close-settings" class="btn-close">&times;</button>
+            </div>
+            <form id="settings-form">
+                <div class="form-group">
+                    <label>Anthropic API Key</label>
+                    <input type="password" id="api-key-input" class="input-modern" placeholder="sk-ant-...">
+                    <small style="color: var(--text-secondary); display: block; margin-top: 0.5rem;">Your API key is saved locally in your browser and never stored on our servers.</small>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Save Settings</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script>
+        // Init dashboard
+        document.addEventListener('DOMContentLoaded', () => {
+            initDashboard();
+        });
+    </script>
+</body>
+</html>
