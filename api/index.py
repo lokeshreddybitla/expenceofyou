@@ -4,6 +4,7 @@ import uuid
 import base64
 import csv
 import io
+import urllib.request
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 
@@ -149,13 +150,6 @@ async def upload_receipt(
     if not active_api_key:
         raise HTTPException(status_code=400, detail="API Key not found. Please add your Gemini API Key in Settings.")
     
-    try:
-        import google.generativeai as genai
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Server missing dependencies: {str(e)}")
-        
-    genai.configure(api_key=active_api_key)
-    
     prompt = (
         "You are an expense extraction assistant. Analyze the uploaded bill or receipt image "
         "and extract: merchant name, total amount, date, individual line items, and suggest a category "
@@ -165,14 +159,35 @@ async def upload_receipt(
     )
     
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        image_part = {
-            "mime_type": media_type,
-            "data": contents
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={active_api_key}"
+        
+        payload = {
+            "contents": [
+                {
+                    "parts": [
+                        {
+                            "text": prompt
+                        },
+                        {
+                            "inline_data": {
+                                "mime_type": media_type,
+                                "data": b64_content
+                            }
+                        }
+                    ]
+                }
+            ],
+            "generationConfig": {
+                "temperature": 0.2,
+                "response_mime_type": "application/json"
+            }
         }
         
-        response = model.generate_content([prompt, image_part])
-        result_text = response.text
+        req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers={'Content-Type': 'application/json'})
+        with urllib.request.urlopen(req) as response:
+            res_data = json.loads(response.read().decode('utf-8'))
+            
+        result_text = res_data['candidates'][0]['content']['parts'][0]['text']
         
         # Gemini might wrap JSON in markdown blocks
         if "```json" in result_text:
